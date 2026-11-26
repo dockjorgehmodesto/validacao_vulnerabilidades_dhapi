@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: rabbitmq
+  name: rabbitmq
+  namespace: "webhooks"
+spec:
+  selector:
+    matchLabels:
+      app: rabbitmq
+  serviceName: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - env:
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: RABBITMQ_NODENAME
+          value: rabbit@$(MY_POD_NAME).rabbitmq.webhooks.svc.cluster.local
+        - name: RABBITMQ_USE_LONGNAME
+          value: "true"
+        - name: RABBITMQ_VM_MEMORY_HIGH_WATERMARK
+          value: "0.49"
+        - name: RABBITMQ_CLUSTER_PARTITION_HANDLING
+          value: pause_minority
+        - name: RABBITMQ_ERLANG_COOKIE
+          value: erlang-cookie-placeholder
+        - name: RABBITMQ_DEFAULT_USER
+          value: admin
+        - name: RABBITMQ_DEFAULT_PASS
+          value: admin
+        - name: AUTOCLUSTER_TYPE
+          value: k8s
+        - name: AUTOCLUSTER_DELAY
+          value: "10"
+        - name: AUTOCLUSTER_FAILURE
+          value: stop
+        - name: AUTOCLUSTER_LOG_LEVEL
+          value: debug
+        - name: CLEANUP_WARN_ONLY
+          value: "false"
+        - name: K8S_ADDRESS_TYPE
+          value: hostname
+        - name: K8S_HOSTNAME_SUFFIX
+          value: .rabbitmq.webhooks.svc.cluster.local
+        image: "desenvolvimento.azurecr.io/pier-hooks-rabbitmq:3.6-autoscale-k8s"
+        imagePullPolicy: Always
+        name: rabbitmq
+        ports:
+        - containerPort: 15672
+          name: http
+          protocol: TCP
+        - containerPort: 5672
+          name: amqp
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - "true"
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /var/lib/rabbitmq
+          name: rabbitmq-persistent-storage
+      restartPolicy: Always
+      serviceAccountName: rabbitmq-pier-hooks
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - metadata:
+      annotations:
+        volume.beta.kubernetes.io/storage-class: managed-premium
+      name: rabbitmq-persistent-storage
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+      volumeMode: Filesystem
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: "webhooks"
+spec:
+  ports:
+  - name: http
+    port: 15672
+    protocol: TCP
+    targetPort: 15672
+  - name: amqp
+    port: 5672
+    protocol: TCP
+    targetPort: 5672
+  selector:
+    app: rabbitmq
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rabbitmq-pier-hooks
+  namespace: "webhooks"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rabbitmq-pier-hooks
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - statefulsets
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rabbitmq-pier-hooks
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rabbitmq-pier-hooks
+subjects:
+- kind: ServiceAccount
+  name: rabbitmq-pier-hooks
+  namespace: "webhooks"

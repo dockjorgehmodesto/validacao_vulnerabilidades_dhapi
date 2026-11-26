@@ -1,0 +1,87 @@
+---
+# Namespace para as dependências
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webhooks
+
+---
+# RABBITMQ: Deployment e Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: webhooks
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      initContainers:
+      - name: download-plugin
+        image: alpine
+        command:
+        - sh
+        - -c
+        - |
+          apk add --no-cache wget && \
+          wget -P /plugins-compartilhados/ https://github.com/rabbitmq/rabbitmq-delayed-message-exchange/releases/download/3.11.1/rabbitmq_delayed_message_exchange-3.11.1.ez
+        volumeMounts:
+        - name: rabbitmq-plugins-volume
+          mountPath: /plugins-compartilhados/
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3.11-management
+        env:
+        - name: RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS
+          value: "-rabbitmq_management path_prefix \"/\""
+        # Habilita o plugin automaticamente na inicialização do RabbitMQ
+        - name: RABBITMQ_ENABLED_PLUGINS_FILE
+          value: "/etc/rabbitmq/enabled_plugins"
+        ports:
+        - containerPort: 5672
+        - containerPort: 15672 # Painel de Gestão
+        volumeMounts:
+        - name: rabbitmq-plugins-volume
+          mountPath: /opt/rabbitmq/plugins/rabbitmq_delayed_message_exchange-3.11.1.ez
+          subPath: rabbitmq_delayed_message_exchange-3.11.1.ez
+        - name: enabled-plugins-config
+          mountPath: /etc/rabbitmq/enabled_plugins
+          subPath: enabled_plugins
+      
+      volumes:
+      - name: rabbitmq-plugins-volume
+        emptyDir: {}
+      - name: enabled-plugins-config
+        configMap:
+          name: rabbitmq-enabled-plugins
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-enabled-plugins
+  namespace: webhooks
+data:
+  enabled_plugins: |
+    [rabbitmq_management,rabbitmq_delayed_message_exchange].
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-svc
+  namespace: webhooks
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+  - name: amqp
+    port: 5672
+    targetPort: 5672
+  - name: management
+    port: 15672
+    targetPort: 15672

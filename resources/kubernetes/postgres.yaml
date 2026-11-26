@@ -1,0 +1,86 @@
+---
+# Namespace para as dependências
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: webhooks
+---
+# POSTGRESQL: Deployment e Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: webhooks
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:18
+        env:
+        - name: POSTGRES_DB
+          value: webhook_dev
+        - name: POSTGRES_USER
+          value: dev_service_webhooks
+        - name: POSTGRES_PASSWORD
+          value: dev_service_webhooks
+        ports:
+        - containerPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-svc
+  namespace: webhooks
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+# ---
+# # RABBITMQ: Deployment e Service
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: rabbitmq
+#   namespace: webhooks
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: rabbitmq
+#   template:
+#     metadata:
+#       labels:
+#         app: rabbitmq
+#     spec:
+#       containers:
+#       - name: rabbitmq
+#         image: rabbitmq:3-management
+#         ports:
+#         - containerPort: 5672
+#         - containerPort: 15672 # Painel de Gestão
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: rabbitmq-svc
+#   namespace: webhooks
+# spec:
+#   selector:
+#     app: rabbitmq
+#   ports:
+#   - name: amqp
+#     port: 5672
+#     targetPort: 5672
+#   - name: management
+#     port: 15672
+#     targetPort: 15672

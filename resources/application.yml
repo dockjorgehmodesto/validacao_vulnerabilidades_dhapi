@@ -1,0 +1,159 @@
+app:
+  profile: "development"
+  name: "DataHub API"
+  description: "API documentation for microservice Webhooks"
+  serviceName: "webhooks"
+server:
+  port: 8080
+swagger:
+  hideInternals: true
+  internalsToken: test
+  ip: localhost
+  port: 8088
+  scheme: http
+  customJson:
+    enabled: false
+    url: "http://www.conductor.com.br/custom.json"
+log:
+  level: "info"
+  splunk: false
+  stdOut:
+    enable: false
+  billing:
+    enabled: false
+    tcp:
+      enabled: true
+      connectionstring: "localhost:5000"
+splunk:
+  dial: "localhost:4445"
+  useTcp: true
+  hec:
+    host: ""
+    token: ""
+    skipTls: true
+cache:
+  enabled: "true"
+  defaultExpirationSeconds: 600
+  entities:
+    tenants: "false"
+    keyVaults: "true"
+    webHooks: "true"
+    queueDelivery: "true"
+  redis:
+    enabled: "false"
+    db: 0
+    addr: "127.0.0.1:6379"
+    password: ""
+    useTls: "false"
+    readTimeout: 100
+    writeTimeout: 100
+
+
+pagination:
+  pageDefault: 1
+  limitDefault: 10
+  sortDefault: "id desc"
+database:
+  reuseConnectionsOnMap: true
+  showSQL: true
+  dialect: "postgres"
+  connectionUri: "host=localhost port=5432 dbname=pier-hooks sslmode=disable"
+  user: "pier-hooks"
+  password: "pier-hooks"
+  migrationPrincipal:
+    enabled: true
+    folder: "./pkg/db/migrations"
+    minimumIdle: 10
+    maximumPoolSize: 15
+  migrationIssuers:
+    enabled: true
+    folder: "./pkg/db/migrations_issuers"
+    minimumIdle: 10
+    maximumPoolSize: 15
+
+rabbit:
+  dial: "amqp://guest:guest@localhost:5672/"
+  virtualHost: "/"
+  sleep: 6
+  headers:
+    attempts: 10
+  qos:
+    prefetchCount: 500
+    prefetchSize: 0
+  retryNumber: 4
+  defaultExchangeName: "DATAHUB_SHARED_REGULAR"
+  defaultQueueName: "pier.hooks.DATAHUB_SHARED_REGULAR"
+  defaultQueueKey: "pier.hooks.DATAHUB_SHARED_REGULAR_KEY"
+  defaultRetryExchangeName: "DATAHUB_SHARED_RETRY"
+  defaultRetryQueueName: "pier.hooks.DATAHUB_SHARED_RETRY"
+  defaultRetryQueueKey: "pier.hooks.DATAHUB_SHARED_RETRY_KEY"
+
+encryption:
+  aesKey:
+    monthsToExpire: 12
+
+amqp:
+  servicebusPrefetch: 1
+  workerCount:
+    rabbitMQConnector: 1
+    servicebusConnector: 1
+    webhookDeliverer: 1
+  reconnectTimeoutSeconds: 30
+  deadletter:
+    contextTimeoutInMinutes: 5
+    workerCount: 50
+  dynamicRabbit:
+    restartTimeoutSeconds: 60
+    defaultHeartbeatSeconds: 10
+    defaultLocale: "en_us"
+    exchangesDeclaration:
+      kind: "direct"
+      durable: true
+      autoDelete: false
+      internal: false
+      noWait: false
+    queuesDeclaration:
+      durable: true
+      autoDelete: false
+      exclusive: false
+      noWait: false
+      messageTimeToLiveMillis: 172800000
+    queueBindings:
+      noWait: false
+    consumer:
+      autoAck: false
+      exclusive: false
+      noLocal: false
+      noWait: false
+
+http:
+  timeoutSecs: 5
+  transport:
+    dialContext:
+      timeoutSecs: 30
+      keepAliveSecs: 30
+    maxIdleConns: 100
+    idleConnTimeoutSecs: 90
+    tlsHandshakeTimeoutSecs: 10
+    expectContinueTimeoutSecs: 1
+
+features:
+  disableMessageReading: true
+  disableWebhookDelivery: false
+  disableWebhookDeliveryRetry: true
+
+eventSelection:
+  enabled: false
+  issuers:
+    - 1
+  events:
+    - statement
+    - address
+    
+datadog:
+  enabled: false
+  agent:
+    host: "datadog-cluster-agent.datadog.svc.cluster.local"
+    port: "5005"
+  percentageTraces: 1.0
+  

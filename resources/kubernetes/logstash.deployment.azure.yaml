@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: logstash-svc
+  namespace: "#{NAMESPACE}#"
+  labels:
+    app: logstash
+    build: "#{Build.BuildId}#"
+spec:
+  ports:
+    - port: 5000
+      protocol: TCP
+      targetPort: 5000
+  selector:
+    app: logstash
+  sessionAffinity: None
+  type: ClusterIP
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-configmap
+  namespace: "#{NAMESPACE}#"
+  labels:
+    app: logstash
+    build: "#{Build.BuildId}#"
+data:
+  PIPELINE_TCP_PORT: "5000"
+  ADLS_FQDN: "#{ADLS_FQDN}#"
+  ADLS_TOKEN_ENDPOINT: "#{ADLS_TOKEN_ENDPOINT}#"
+  ADLSCLIENTID: "#{ADLSCLIENTID}#"
+  ADLSCLIENTKEY: "#{webhooks-adls-clientkey}#"
+  PIPELINE_OUTPUT_ADLS_TEST_PATH: "#{PIPELINE_OUTPUT_ADLS_TEST_PATH}#"
+  SINCEDB_PATH: "#{SINCEDB_PATH}#"
+  ADLS_PATH_EVENTS: "#{ADLS_PATH_EVENTS}#"
+  ADLS_PATH_GENERAL: "#{ADLS_PATH_GENERAL}#"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: logstash
+    build: "#{Build.BuildId}#"
+  name: logstash
+  namespace: "#{NAMESPACE}#"
+spec:
+  replicas: #{DEPLOYMENT_REPLICAS}#
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: logstash
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: logstash
+    spec:
+      nodeSelector: #{NODE_SELECTOR}#
+      containers:
+        - envFrom:
+            - configMapRef:
+                name: logstash-configmap
+          image: "#{IMAGE}#"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 2
+            initialDelaySeconds: 120
+            periodSeconds: 5
+            successThreshold: 1
+            tcpSocket:
+              port: 5000
+            timeoutSeconds: 1
+          name: logstash
+          ports:
+            - containerPort: 5000
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 2
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 5000
+            timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: 0.5
+              memory: 1536Mi
+            limits:
+              cpu: 1.5
+              memory: 3072Mi

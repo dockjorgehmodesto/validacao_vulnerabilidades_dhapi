@@ -1,3 +1,0 @@
-- pipeline.id: datahub
-  path.config: "/usr/share/logstash/pipeline/datahub.conf"
-  pipeline.workers: "${DATAHUB_PIPELINE_WORKERS:3}"

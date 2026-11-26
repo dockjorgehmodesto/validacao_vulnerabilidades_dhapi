@@ -1,0 +1,21 @@
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      ref: refs/heads/master
+      name: azure-pipeline-templates/azure-pipeline-templates
+
+stages:
+- template: golang/sast.yaml@templates
+  parameters:
+    workingDirectory: "./"
+    golangContainerImage: "golang:1.19"
+    sonarQubeServiceConnection: "SonarQ"
+    sonarQubeProjectKey: "webhooks-api"
+    sonarQubeProjectName: "Webhooks API"
+    patSubscription: "DEV/Test - Subscriptionnew"
+    testContinueOnError: false
+    testCommand: |
+      go get github.com/swaggo/swag/cmd/swag@v1.6.5
+      swag init --output cmd/http/docs --generalInfo cmd/http/main.go
+      go test ./...

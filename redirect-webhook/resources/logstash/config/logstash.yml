@@ -1,0 +1,11 @@
+xpack:
+  monitoring:
+    enabled: false
+
+queue:
+  type: persisted
+  max_bytes: 2gb
+  drain: true     # Waits for logstash's queue to drain before it shuts down
+
+http:
+  host: "0.0.0.0"

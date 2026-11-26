@@ -1,0 +1,47 @@
+version: '3'
+services:
+
+  postgresql:
+    image: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: "pier-hooks"
+      POSTGRES_USER: "pier-hooks"
+      POSTGRES_DB: "pier-hooks"
+
+  pier-hooks-rabbitmq:
+    build:
+      context: .
+      dockerfile: Dockerfile_rabbitmq
+    container_name: "pier-hooks-rabbitmq"
+    hostname: rabbitmq
+    ports:
+     - "15672:15672"
+     - "5672:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"
+      RABBITMQ_DEFAULT_VHOST: "/"
+
+  # pier-hooks:
+  #   build:
+  #     context: ../../
+  #     dockerfile: resources/docker/Dockerfile
+  #   container_name: "pier-hooks"
+  #   environment:
+  #     RABBIT_DIAL: "amqp://guest:guest@rabbitmq:5672"
+  #     RABBIT_VIRTUALHOST: "/"
+  #   restart: on-failure
+  #   depends_on:
+  #     - pier-hooks-rabbitmq
+  #   links:
+  #     - pier-hooks-rabbitmq:rabbitmq
+  #   ports:
+  #     - "8080:8080"
+  redis:
+    image: 'bitnami/redis:latest'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - "6379:6379"
